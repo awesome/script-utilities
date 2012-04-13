@@ -25,52 +25,53 @@
 ##########################################################
 # init
 ##########################################################
-TIME_START=`date '+%Y-%m-%d %H:%M:%S'`
-ERROR_MSG=''
+TIME_START=`date "+%Y-%m-%d %H:%M:%S"`
+ERROR_MSG=""
 HOST=`hostname`
-DATE=`date '+%Y_%m_%d'`
+DATE=`date "+%Y_%m_%d"`
 source `dirname $0`/backup.conf
 
 # system
-RES=`/usr/bin/uname -s`
-RES=${RES,,}
-if [ '$RES' = 'freebsd' ]; then
-	OS='FREEBSD'
-elif [ '$RES' = 'linux' ]; then
+CMD_UNAME=`/usr/bin/which uname`
+RES=`$CMD_UNAME -s | tr '[:upper:]' '[:lower:]'`
+if [ "$RES" = "freebsd" ]; then
+	OS="FREEBSD"
+elif [ "$RES" = "linux" ]; then
 	if [ -f /etc/redhat-release ]; then
-		OS='REDHAT'
+		OS="REDHAT"
 	elif [ -f /etc/debian_version ]; then
-		OS='DEBIAN'
+		OS="DEBIAN"
 	else
-		echo 'Unknown Linux OS'
+		echo "Unknown Linux OS"
 		exit
+	fi
 else
-	echo 'Unknown OS'
+	echo "Unknown OS"
 	exit
 fi
 
 # bin locations
-CMD_RSYNC=`/usr/bin/which rsync`
-CMD_TAR=`/usr/bin/which tar`
-CMD_MKDIR=`/usr/bin/which mkdir`
-CMD_RM=`/usr/bin/which rm`
-CMD_MYSQL=`/usr/bin/which mysql`
-CMD_MYSQLDUMP=`/usr/bin/which mysqldump`
-CMD_UMOUNT=`/usr/bin/which umount`
-CMD_MAIL=`/usr/bin/which mail`
+CMD_RSYNC=`/usr/bin/which rsync 2>/dev/null`
+CMD_TAR=`/usr/bin/which tar 2>/dev/null`
+CMD_MKDIR=`/usr/bin/which mkdir 2>/dev/null`
+CMD_RM=`/usr/bin/which rm 2>/dev/null`
+CMD_MYSQL=`/usr/bin/which mysql 2>/dev/null`
+CMD_MYSQLDUMP=`/usr/bin/which mysqldump 2>/dev/null`
+CMD_UMOUNT=`/usr/bin/which umount 2>/dev/null`
+CMD_MAIL=`/usr/bin/which mail 2>/dev/null`
 
-if [ $OS = 'FREEBSD' ]; then
-	CMD_MOUNT_NFS=`/usr/bin/which mount_nfs`
-	CMD_MOUNT_SMB=`/usr/bin/which mount_smbfs`
-	CMD_PKG_INFO=`/usr/bin/which pkg_info`
-elif [ $OS = 'REDHAT' ]; then
-	CMD_MOUNT=`/usr/bin/which mount`
-	CMD_MOUNT_SMB=`/usr/bin/which mount.cifs`
-	CMD_YUM=`/usr/bin/which yum`
-else [ $OS = 'DEBIAN' ]; then
-	CMD_MOUNT=`/usr/bin/which mount`
-	CMD_MOUNT_SMB=`/usr/bin/which mount.cifs`
-	CMD_DPKG=`/usr/bin/which dpkg`
+if [ $OS = "FREEBSD" ]; then
+	CMD_MOUNT_NFS=`/usr/bin/which mount_nfs 2>/dev/null`
+	CMD_MOUNT_SMB=`/usr/bin/which mount_smbfs 2>/dev/null`
+	CMD_PKG=`/usr/bin/which pkg_info 2>/dev/null`
+elif [ $OS = "REDHAT" ]; then
+	CMD_MOUNT=`/usr/bin/which mount 2>/dev/null`
+	CMD_MOUNT_SMB=`/usr/bin/which mount.cifs 2>/dev/null`
+	CMD_PKG=`/usr/bin/which yum 2>/dev/null`
+elif [ $OS = "DEBIAN" ]; then
+	CMD_MOUNT=`/usr/bin/which mount 2>/dev/null`
+	CMD_MOUNT_SMB=`/usr/bin/which mount.cifs 2>/dev/null`
+	CMD_PKG=`/usr/bin/which dpkg 2>/dev/null`
 fi
 
 ##########################################################
@@ -78,7 +79,7 @@ fi
 ##########################################################
 # creating directories
 ##########################################################
-if [ -d $LOCAL_MNT ];
+if [ -d $LOCAL_MNT ]; then
 	$CMD_MKDIR -p ${LOCAL_MNT}
 fi
 
@@ -105,27 +106,27 @@ fi
 ##########################################################
 # mounting NFS share
 ##########################################################
-if [ $OS = 'FREEBSD' ]; then
-	if [ '${REMOTE_FS_TYPE_NORMAL}' = 'nfs' ]; then
+if [ $OS = "FREEBSD" ]; then
+	if [ "${REMOTE_FS_TYPE_NORMAL}" = "nfs" ]; then
 		$CMD_MOUNT_NFS -o nolockd ${BACKUP_HOST}:/backup/${HOST} $LOCAL_MNT
-	elif [ '${REMOTE_FS_TYPE_NORMAL}' = 'nfs4' ]; then
+	elif [ "${REMOTE_FS_TYPE_NORMAL}" = "nfs4" ]; then
 		$CMD_MOUNT_NFS -o nfsv4,suid ${BACKUP_HOST}:/backup/${HOST} $LOCAL_MNT
-	elif [ '${REMOTE_FS_TYPE_NORMAL}' = 'cifs' ]; then
+	elif [ "${REMOTE_FS_TYPE_NORMAL}" = "cifs" ]; then
 		$CMD_MOUNT_SMB -I ${BACKUP_HOST} -N //${FS_USER}@${BACKUP_HOST}/backup.${HOST}/ $LOCAL_MNT
 	fi
 else
-	if [ '${REMOTE_FS_TYPE_NORMAL}' = 'nfs' ]; then
+	if [ "${REMOTE_FS_TYPE_NORMAL}" = "nfs" ]; then
 		$CMD_MOUNT -t ${REMOTE_FS_TYPE_NORMAL} -o nolock ${BACKUP_HOST}:/backup/${HOST} $LOCAL_MNT
-	elif [ '${REMOTE_FS_TYPE_NORMAL}' = 'nfs4' ]; then
+	elif [ "${REMOTE_FS_TYPE_NORMAL}" = "nfs4" ]; then
 		$CMD_MOUNT -t ${REMOTE_FS_TYPE_NORMAL} -o suid ${BACKUP_HOST}:/backup/${HOST} $LOCAL_MNT
-	elif [ '${REMOTE_FS_TYPE_NORMAL}' = 'cifs' ]; then
+	elif [ "${REMOTE_FS_TYPE_NORMAL}" = "cifs" ]; then
 		$CMD_MOUNT_SMB //${BACKUP_HOST}/backup.${HOST}/ $LOCAL_MNT -o user=${FS_USER},password=${FS_PASS},directio
 	fi
 fi
 
 if [ $? -ne 0 ]; then
-   echo 'Error mounting share'
-   ERROR_MSG='${ERROR_MSG}Error mounting share\n'
+   echo "Error mounting share"
+   ERROR_MSG="${ERROR_MSG}Error mounting share\n"
    ENABLE_MYSQL=0
    ENABLE_SVN=0
    ENABLE_GIT=0
@@ -136,36 +137,36 @@ fi
 # databases backup
 ##########################################################
 if [ ${ENABLE_MYSQL} -eq 1 ]; then
-   echo '# Backuping databases #'
+   echo "# Backuping databases #"
 
-   DBS=`$CMD_MYSQL -h $MYSQL_HOST --silent -u $MYSQL_USER -p$MYSQL_PASS -e 'SHOW DATABASES'`
+   DBS=`$CMD_MYSQL -h $MYSQL_HOST --silent -u $MYSQL_USER -p$MYSQL_PASS -e "SHOW DATABASES"`
    if [ $? -ne 0 ]; then
-      echo 'Error fetching db list'
-      ERROR_MSG='${ERROR_MSG}Error fetching db list\n'
+      echo "Error fetching db list"
+      ERROR_MSG="${ERROR_MSG}Error fetching db list\n"
    else
       TIME_DB_DUMP_START=`date +%s`
       for DB in ${DBS}; do
-          if [ '${DB}' == '' ]; then continue; fi;
-          if [ '${DB}' == 'information_schema' ]; then continue; fi;
-              echo -en '\t${DB} - '
-              $CMD_MYSQLDUMP -h $MYSQL_HOST  $MYSQL_USER -p$MYSQL_PASS -eC ${DB} | gzip >${BACKUP_DIR}/mysql/${DATE}_${DB}.sql.gz
+          if [ "${DB}" == "" ]; then continue; fi;
+          if [ "${DB}" == "information_schema" ]; then continue; fi;
+              echo -en "\t${DB} - "
+              $CMD_MYSQLDUMP -h $MYSQL_HOST -u $MYSQL_USER -p$MYSQL_PASS -eC ${DB} | gzip >${BACKUP_DIR}/mysql/${DATE}_${DB}.sql.gz
               if [ $? -ne 0 ]; then
-              echo 'ERR!!!'
-              ERROR_MSG='${ERROR_MSG}Error backuping database ${DB}\n'
+              echo "ERR!!!"
+              ERROR_MSG="${ERROR_MSG}Error backuping database ${DB}\n"
           else
-              echo 'OK'
+              echo "OK"
           fi
       done
       TIME_DB_DUMP_END=`date +%s`
-      echo '# Copying databases to backup host #'
+      echo "# Copying databases to backup host #"
       $CMD_MKDIR -p $LOCAL_MNT/mysql/${DATE}
       if [ $? -ne 0 ]; then
-          ERROR_MSG='${ERROR_MSG}Error creating directory for dumps on backup server\n'
+          ERROR_MSG="${ERROR_MSG}Error creating directory for dumps on backup server\n"
       else
           TIME_DB_CP_START=`date +%s`
           cp -r ${BACKUP_DIR}/mysql/*.sql.gz $LOCAL_MNT/mysql/${DATE}
           if [ $? -ne 0 ]; then
-              ERROR_MSG='${ERROR_MSG}Error copying db dumps to backup server\n'
+              ERROR_MSG="${ERROR_MSG}Error copying db dumps to backup server\n"
           fi
           TIME_DB_CP_END=`date +%s`
       fi
@@ -176,31 +177,31 @@ fi
 # SVN
 ##########################################################
 if [ ${ENABLE_SVN} -eq 1 ]; then
-   echo '# Backuping SVN #'
+   echo "# Backuping SVN #"
    TIME_SVN_DUMP_START=`date +%s`
    cd ${SVN_ROOT}
    REPOS=`find . -mindepth 1 -maxdepth 1 -type d`
    for REPO in ${REPOS}; do
       REPO=`basename ${REPO}`
-      echo -en '\t${REPO} - '
-      $CMD_TAR -cpzf '${BACKUP_DIR}/svn/${DATE}_${REPO}.tgz' ${REPO}
+      echo -en "\t${REPO} - "
+      $CMD_TAR -cpzf "${BACKUP_DIR}/svn/${DATE}_${REPO}.tgz" ${REPO}
       if [ $? -ne 0 ]; then
-         echo 'ERR!!!'
-         ERROR_MSG='${ERROR_MSG}Error backuping SVN repository ${REPO}\n'
+         echo "ERR!!!"
+         ERROR_MSG="${ERROR_MSG}Error backuping SVN repository ${REPO}\n"
       else
-         echo 'OK'
+         echo "OK"
       fi
    done;
    TIME_SVN_DUMP_END=`date +%s`
-   echo '# Copying SVN repositories to backup host #'
+   echo "# Copying SVN repositories to backup host #"
    $CMD_MKDIR -p $LOCAL_MNT/svn/${DATE}
    if [ $? -ne 0 ]; then
-      ERROR_MSG='${ERROR_MSG}Error creating directory for SVN repositories on backup server\n'
+      ERROR_MSG="${ERROR_MSG}Error creating directory for SVN repositories on backup server\n"
    else
       TIME_SVN_CP_START=`date +%s`
       cp -r ${BACKUP_DIR}/svn/*.tgz $LOCAL_MNT/svn/${DATE}
       if [ $? -ne 0 ]; then
-         ERROR_MSG='${ERROR_MSG}Error copying SVN repositories to backup server\n'
+         ERROR_MSG="${ERROR_MSG}Error copying SVN repositories to backup server\n"
       fi
       TIME_SVN_CP_END=`date +%s`
    fi
@@ -210,31 +211,31 @@ fi
 # GIT
 ##########################################################
 if [ ${ENABLE_GIT} -eq 1 ]; then
-   echo '# Backuping GIT #'
+   echo "# Backuping GIT #"
    TIME_GIT_DUMP_START=`date +%s`
    cd ${GIT_ROOT}
    REPOS=`find . -mindepth 1 -maxdepth 1 -type d`
    for REPO in ${REPOS}; do
       REPO=`basename ${REPO}`
-      echo -en '\t${REPO} - '
-      $CMD_TAR -cpzf '${BACKUP_DIR}/git/${DATE}_${REPO}.tgz' ${REPO}
+      echo -en "\t${REPO} - "
+      $CMD_TAR -cpzf "${BACKUP_DIR}/git/${DATE}_${REPO}.tgz" ${REPO}
       if [ $? -ne 0 ]; then
-         echo 'ERR!!!'
-         ERROR_MSG='${ERROR_MSG}Error backuping GIT repository ${REPO}\n'
+         echo "ERR!!!"
+         ERROR_MSG="${ERROR_MSG}Error backuping GIT repository ${REPO}\n"
       else
-         echo 'OK'
+         echo "OK"
       fi
    done;
    TIME_GIT_DUMP_END=`date +%s`
-   echo '# Copying GIT repositories to backup host #'
+   echo "# Copying GIT repositories to backup host #"
    $CMD_MKDIR -p $LOCAL_MNT/git/${DATE}
    if [ $? -ne 0 ]; then
-      ERROR_MSG='${ERROR_MSG}Error creating directory for GIT repositories on backup server\n'
+      ERROR_MSG="${ERROR_MSG}Error creating directory for GIT repositories on backup server\n"
    else
       TIME_GIT_CP_START=`date +%s`
       cp -r ${BACKUP_DIR}/git/*.tgz $LOCAL_MNT/git/${DATE}
       if [ $? -ne 0 ]; then
-         ERROR_MSG='${ERROR_MSG}Error copying GIT repositories to backup server\n'
+         ERROR_MSG="${ERROR_MSG}Error copying GIT repositories to backup server\n"
       fi
       TIME_GIT_CP_END=`date +%s`
    fi
@@ -244,32 +245,35 @@ fi
 # files
 ##########################################################
 if [ ${ENABLE_FILES} -eq 1 ]; then
-   echo '# Backuping files #'
+   echo "# Backuping files #"
    TIME_FILES_DUMP_START=`date +%s`
-   $CMD_TAR -cpzf '${BACKUP_DIR}/files/${DATE}_files.tgz' ${FILES_INCLUDE} 2>/dev/null
+   $CMD_TAR -cpzf "${BACKUP_DIR}/files/${DATE}_files.tgz" ${FILES_INCLUDE} 2>/dev/null
    if [ $? -ne 0 ]; then
-      ERROR_MSG='${ERROR_MSG}Error creating tar file\n'
+      ERROR_MSG="${ERROR_MSG}Error creating tar file\n"
    fi
 
-#OS
-   yum list installed | gzip >'${BACKUP_DIR}/files/${DATE}_packages.gz'
-dpkg -l | gzip >'${BACKUP_DIR}/files/${DATE}_packages.gz'
-/usr/sbin/pkg_info | gzip >'${BACKUP_DIR}/files/${DATE}_packages.gz'
+    if [ $OS = "FREEBSD" ]; then
+	$CMD_PKG | gzip >"${BACKUP_DIR}/files/${DATE}_packages.gz"
+    elif [ $OS = "REDHAT" ]; then
+	$CMD_PKG list installed | gzip >"${BACKUP_DIR}/files/${DATE}_packages.gz"
+    else
+	$CMD_PKG -l | gzip >"${BACKUP_DIR}/files/${DATE}_packages.gz"
+    fi
 
    if [ $? -ne 0 ]; then
-      ERROR_MSG='${ERROR_MSG}Error fetching installed packages\n'
+      ERROR_MSG="${ERROR_MSG}Error fetching installed packages\n"
    fi
    TIME_FILES_DUMP_END=`date +%s`
 
-   echo '# Sending files #'
+   echo "# Sending files #"
    $CMD_MKDIR -p $LOCAL_MNT/files/${DATE}
    if [ $? -ne 0 ]; then
-      ERROR_MSG='${ERROR_MSG}Error creating directory for files on backup server\n'
+      ERROR_MSG="${ERROR_MSG}Error creating directory for files on backup server\n"
    else
       TIME_FILES_CP_START=`date +%s`
       cp -r ${BACKUP_DIR}/files/*gz $LOCAL_MNT/files/${DATE}
       if [ $? -ne 0 ]; then
-         ERROR_MSG='${ERROR_MSG}Error copying files to backup server\n'
+         ERROR_MSG="${ERROR_MSG}Error copying files to backup server\n"
       fi
       TIME_FILES_CP_END=`date +%s`
    fi
@@ -299,8 +303,8 @@ fi
 ##########################################################
 $CMD_UMOUNT $LOCAL_MNT
 if [ $? -ne 0 ]; then
-   echo 'Error unmounting share'
-   ERROR_MSG='${ERROR_MSG}Error unmounting share\n'
+   echo "Error unmounting share"
+   ERROR_MSG="${ERROR_MSG}Error unmounting share\n"
    ENABLE_FS=0
 fi
 
@@ -308,10 +312,10 @@ fi
 # rsyncing filesystem
 ##########################################################
 if [ ${ENABLE_FS} -eq 1 ]; then
-   echo '# Rsyncing filesystem #'
+   echo "# Rsyncing filesystem #"
    TIME_RSYNC_START=`date +%s`
 
-	if [ $OS = 'FREEBSD' ]; then
+	if [ $OS = "FREEBSD" ]; then
 		if [ "${REMOTE_FS_TYPE_RSYNC}" = "nfs" ]; then
 		   $CMD_MOUNT_NFS -o nolock ${BACKUP_HOST}:/backup2/${HOST} $LOCAL_MNT
 		elif [ "${REMOTE_FS_TYPE_RSYNC}" = "nfs4" ]; then
@@ -320,31 +324,31 @@ if [ ${ENABLE_FS} -eq 1 ]; then
 		   $CMD_MOUNT_SMB -I ${BACKUP_HOST} -N //${FS_USER}@${BACKUP_HOST}/backup2.${HOST}/ $LOCAL_MNT
 		fi
 	else
-		if [ '${REMOTE_FS_TYPE_RSYNC}' = 'nfs' ]; then
+		if [ "${REMOTE_FS_TYPE_RSYNC}" = "nfs" ]; then
 		   $CMD_MOUNT -t ${REMOTE_FS_TYPE_RSYNC} -o nolock ${BACKUP_HOST}:/backup2/${HOST} $LOCAL_MNT
-		elif [ '${REMOTE_FS_TYPE_RSYNC}' = 'nfs4' ]; then
+		elif [ "${REMOTE_FS_TYPE_RSYNC}" = "nfs4" ]; then
 		   $CMD_MOUNT -t ${REMOTE_FS_TYPE_RSYNC} -o suid ${BACKUP_HOST}:/backup2/${HOST} $LOCAL_MNT
-		elif [ '${REMOTE_FS_TYPE_RSYNC}' = 'cifs' ]; then
+		elif [ "${REMOTE_FS_TYPE_RSYNC}" = "cifs" ]; then
 		   $CMD_MOUNT_SMB //${BACKUP_HOST}/backup2.${HOST}/ $LOCAL_MNT -o user=${FS_USER},password=${FS_PASS},directio
 		fi
 	fi
 
    if [ $? -ne 0 ]; then
-      echo 'Error mounting remote share'
-      ERROR_MSG='${ERROR_MSG}Error mounting remote share\n'
+      echo "Error mounting remote share"
+      ERROR_MSG="${ERROR_MSG}Error mounting remote share\n"
    else
       $CMD_RSYNC -lrpogt --delete ${RSYNC_EXCLUDES} ${RSYNC_DIRS} $LOCAL_MNT
       RES=$?
       if [ $RES -ne 0 ] && [ $RES -ne 24 ]; then
-          echo 'Error rsyncing files'
-          ERROR_MSG='${ERROR_MSG}Error rsyncing files\n'
+          echo "Error rsyncing files"
+          ERROR_MSG="${ERROR_MSG}Error rsyncing files\n"
       fi
-      echo '# Creating BACKUP_COMPLETED file #'
+      echo "# Creating BACKUP_COMPLETED file #"
       touch $LOCAL_MNT/BACKUP_COMPLETED
       $CMD_UMOUNT $LOCAL_MNT
       if [ $? -ne 0 ]; then
-         echo 'Error unmounting remote share'
-         ERROR_MSG='${ERROR_MSG}Error unmounting remote share\n'
+         echo "Error unmounting remote share"
+         ERROR_MSG="${ERROR_MSG}Error unmounting remote share\n"
       fi
    fi
    TIME_RSYNC_END=`date +%s`
@@ -353,44 +357,44 @@ fi
 ##########################################################
 # finishing
 ##########################################################
-if [ '${ERROR_MSG}' == '' ]; then
-   ERROR_IND=''
+if [ "${ERROR_MSG}" == "" ]; then
+   ERROR_IND=""
 else
-   ERROR_IND=' [ ERROR ]'
+   ERROR_IND=" [ ERROR ]"
 fi
 
 ##########################################################
 # time calculations
 ##########################################################
-TIME_END=`date '+%Y-%m-%d %H:%M:%S'`
-TIME_MSG='\tSTART:\t${TIME_START}\n\tEND:\t${TIME_END}\n'
+TIME_END=`date "+%Y-%m-%d %H:%M:%S"`
+TIME_MSG="\tSTART:\t${TIME_START}\n\tEND:\t${TIME_END}\n"
 if [ ${ENABLE_MYSQL} -eq 1 ]; then
    T1=$((TIME_DB_DUMP_END-TIME_DB_DUMP_START))
    T2=$((TIME_DB_CP_END-TIME_DB_CP_START))
-   TIME_MSG='${TIME_MSG}\tMYSQL:\tdmp:${T1} cp:${T2}\n'
+   TIME_MSG="${TIME_MSG}\tMYSQL:\tdmp:${T1} cp:${T2}\n"
 fi
 if [ ${ENABLE_SVN} -eq 1 ]; then
    T1=$((TIME_SVN_DUMP_END-TIME_SVN_DUMP_START))
    T2=$((TIME_SVN_CP_END-TIME_SVN_CP_START))
-   TIME_MSG='${TIME_MSG}\tSVN:\tdmp:${T1} cp:${T2}\n'
+   TIME_MSG="${TIME_MSG}\tSVN:\tdmp:${T1} cp:${T2}\n"
 fi
 if [ ${ENABLE_GIT} -eq 1 ]; then
    T1=$((TIME_GIT_DUMP_END-TIME_GIT_DUMP_START))
    T2=$((TIME_GIT_CP_END-TIME_GIT_CP_START))
-   TIME_MSG='${TIME_MSG}\tGIT:\tdmp:${T1} cp:${T2}\n'
+   TIME_MSG="${TIME_MSG}\tGIT:\tdmp:${T1} cp:${T2}\n"
 fi
 if [ ${ENABLE_FILES} -eq 1 ]; then
    T1=$((TIME_FILES_DUMP_END-TIME_FILES_DUMP_START))
    T2=$((TIME_FILES_CP_END-TIME_FILES_CP_START))
-   TIME_MSG='${TIME_MSG}\tFILES:\tdmp:${T1} cp:${T2}\n'
+   TIME_MSG="${TIME_MSG}\tFILES:\tdmp:${T1} cp:${T2}\n"
 fi
 if [ ${ENABLE_FS} -eq 1 ]; then
    T1=$((TIME_RSYNC_END-TIME_RSYNC_START))
-   TIME_MSG='${TIME_MSG}\tRSYNC:\t${T1}\n'
+   TIME_MSG="${TIME_MSG}\tRSYNC:\t${T1}\n"
 fi
 
 ##########################################################
 # report
 ##########################################################
-echo -e 'Backup completed\nRemote filesystem: ${REMOTE_FS_TYPE_NORMAL} / ${REMOTE_FS_TYPE_RSYNC}\nTimes:\n${TIME_MSG}\n\n${ERROR_MSG}' | $CMD_MAIL -s '[ ${HOST} ]${ERROR_IND} BACKUP' tech
-echo '# Backup completed #'
+echo -e "Backup completed\nRemote filesystem: ${REMOTE_FS_TYPE_NORMAL} / ${REMOTE_FS_TYPE_RSYNC}\nTimes:\n${TIME_MSG}\n\n${ERROR_MSG}" | $CMD_MAIL -s "[ ${HOST} ]${ERROR_IND} BACKUP" tech
+echo "# Backup completed #"
