@@ -1,0 +1,81 @@
+#                                                                                                                                                                                   
+# Copyright (c) 2012 CodePill Sp. z o.o.
+# Author: Krzysztof Ksiezyk <kksiezyk@gmail.com>
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
+# START #
+
+:local cwemail "myemail@mydomain.com"
+:local cwemailfrom "router@myrouter.com"
+:local cwstmphost "192.168.1.1"
+:local cwbackupint "backupinterfacename"
+:local cwmessage ""
+
+# CHECK #
+:local cwfwrulenum [/ip firewall mangle find new-routing-mark=failover]
+if ( [ :len $cwfwrulenum ] > 1 ) do={
+   /tool e-mail send server=$cwstmphost body="Too many firewall rules. Remove them manually..." from=$cwemailfrom to=$cwemail subject=" [ ROUTER ] [ ERROR ] CONNECTION WATCH"
+   :error "Too many firewall rules. Remove them manually..."
+}
+
+:if ( $cwfwrulenum = "" ) do={
+   :put "Adding firewall rule..."
+   /ip firewall mangle add action=mark-routing chain=prerouting in-interface=!$cwbackupint comment="MARKING RULE FOR ROUTING PACKETS THROUGH NEOSTRADA CONNECTION (SEE ROUTING RULES) - DISABLED BY DEFAULT" disabled=yes new-routing-mark=failover passthrough=yes
+   :set cwfwrulenum [/ip firewall mangle find new-routing-mark=failover]
+}
+:local cwfwruledisabled [/ip firewall mangle get $cwfwrulenum disabled]
+
+# TEST DESTINATIONS
+:put "Testing onet.pl through main connection"
+:local cwcount1 [/ping routing-table=main count=5 213.180.146.27]
+:put "Testing yahoo.com through main connection"
+:local cwcount2 [/ping routing-table=main count=5 98.139.183.24]
+:put "Testing google.pl through main connection"
+:local cwcount3 [/ping routing-table=main count=5 209.85.148.103]
+
+# CHECK RESULTS
+:if ( $cwcount1<4 ) do={ :set cwmessage ($cwmessage.(100-($cwcount1*100)/5)."% loss to onet.pl\r\n") }
+:if ( $cwcount2<4 ) do={ :set cwmessage ($cwmessage.(100-($cwcount2*100)/5)."% loss to yahoo.com\r\n") }
+:if ( $cwcount3<4 ) do={ :set cwmessage ($cwmessage.(100-($cwcount3*100)/5)."% loss to google.pl\r\n") }
+:put $cwmessage
+
+:if ($cwcount1<2 && $cwcount2<2 && $cwcount3<2) do={
+   if ($cwfwruledisabled) do={
+      :put "Switching to backup connection"
+      :log info "Switching to backup connection"
+      /ip firewall mangle set $cwfwrulenum disabled=no
+      :set cwmessage ($cwmessage."\r\nSwitching to backup connection")
+   } else={
+      :put "Backup connection is already active"
+   }
+} else={
+   if (!$cwfwruledisabled) do={
+      :put "Switching to main connection"
+      :log info "Switching to main connection"
+      /ip firewall mangle set $cwfwrulenum disabled=yes
+      :set cwmessage ($cwmessage."\r\nSwitching to main connection")
+   } else={
+      :put "Already using main connection"
+   }
+}
+
+if ( $cwmessage != "" ) do={
+   /tool e-mail send server=$cwstmphost body=$cwmessage from=$cwemailfrom to=$cwemail subject=" [ ROUTER ] CONNECTION WATCH"
+}

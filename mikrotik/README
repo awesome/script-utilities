@@ -1,0 +1,17 @@
+#----------------------------------------------------------------------
+# SCRIPTS FOR USE ON ROUTEROS (MIKROTIK PLATFORM)
+#----------------------------------------------------------------------
+
+#----------------------------------------------------------------------
+# connection-watch
+#----------------------------------------------------------------------
+
+This script monitors IP addresess outside LAN using main connection. If packet losses for each monitored destinations are more than 40%, then script swtiches routing to backup connection. 
+
+Usage:
+
+Import script into Mikrotik and adjust few variables at the beginning and target destinations and descriptions in the script body. Additionally this script requires few routes with "failover" mark. You can add it for example from terminal using:
+
+/ip route add disabled=no distance=2 dst-address=0.0.0.0/0 gateway=backupinterfacename routing-mark=failover
+
+You have to add similar route for each local interface - otherwise routing between local interfaces won't work in case of main connection failure
