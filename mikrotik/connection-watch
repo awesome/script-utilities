@@ -25,7 +25,6 @@
 :local cwemail "myemail@mydomain.com"
 :local cwemailfrom "router@myrouter.com"
 :local cwstmphost "192.168.1.1"
-:local cwbackupint "backupinterfacename"
 :local cwmessage ""
 
 # CHECK #
@@ -37,7 +36,7 @@ if ( [ :len $cwfwrulenum ] > 1 ) do={
 
 :if ( $cwfwrulenum = "" ) do={
    :put "Adding firewall rule..."
-   /ip firewall mangle add action=mark-routing chain=prerouting in-interface=!$cwbackupint comment="MARKING RULE FOR ROUTING PACKETS THROUGH NEOSTRADA CONNECTION (SEE ROUTING RULES) - DISABLED BY DEFAULT" disabled=yes new-routing-mark=failover passthrough=yes
+   /ip firewall mangle add action=mark-routing chain=prerouting in-interface=!backupinterfacename comment="MARKING RULE FOR ROUTING PACKETS THROUGH NEOSTRADA CONNECTION (SEE ROUTING RULES) - DISABLED BY DEFAULT" disabled=yes new-routing-mark=failover passthrough=yes
    :set cwfwrulenum [/ip firewall mangle find new-routing-mark=failover]
 }
 :local cwfwruledisabled [/ip firewall mangle get $cwfwrulenum disabled]

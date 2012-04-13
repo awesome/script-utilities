@@ -10,7 +10,7 @@ This script monitors IP addresess outside LAN using main connection. If packet l
 
 Usage:
 
-Import script into Mikrotik and adjust few variables at the beginning and target destinations and descriptions in the script body. Additionally this script requires few routes with "failover" mark. You can add it for example from terminal using:
+Import script into Mikrotik and adjust few variables at the beginning, backup interface name (backupinterfacename) in mangle rule and target destinations and descriptions in the script body. Additionally this script requires few routes with "failover" mark. You can add it for example from terminal using:
 
 /ip route add disabled=no distance=2 dst-address=0.0.0.0/0 gateway=backupinterfacename routing-mark=failover
 
