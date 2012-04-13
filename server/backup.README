@@ -1,3 +1,0 @@
-This script can be used to do backups from local filesystem and mysql database to remote filesystem using nfs or samba protocol.
-
-It runs on FreeBSD, Ubuntu (Debian) and Centos (RedHat) systems.
