@@ -23,6 +23,13 @@
 #
 
 ##########################################################
+# TO DO
+##########################################################
+# - check if network filesystems are installed
+# - report errors in email in text format
+##########################################################
+
+##########################################################
 # init
 ##########################################################
 TIME_START=`date "+%Y-%m-%d %H:%M:%S"`
@@ -51,13 +58,27 @@ else
 fi
 
 # bin locations
-CMD_RSYNC=`/usr/bin/which rsync 2>/dev/null`
+if [ ${ENABLE_FS} -eq 1 ]; then
+	CMD_RSYNC=`/usr/bin/which rsync 2>/dev/null`
+	if [ $? -ne 0 ]; then
+		echo "Rsync is necessary when ENABLE_FS is set"
+		exit
+	fi 
+fi
 CMD_TAR=`/usr/bin/which tar 2>/dev/null`
+if [ $? -ne 0 ]; then echo "TAR command is necessary..."; exit; fi
 CMD_MKDIR=`/usr/bin/which mkdir 2>/dev/null`
+if [ $? -ne 0 ]; then echo "mkdir command is necessary..."; exit; fi
 CMD_RM=`/usr/bin/which rm 2>/dev/null`
-CMD_MYSQL=`/usr/bin/which mysql 2>/dev/null`
-CMD_MYSQLDUMP=`/usr/bin/which mysqldump 2>/dev/null`
+if [ $? -ne 0 ]; then echo "rm command is necessary..."; exit; fi
+if [ ${ENABLE_MYSQL} -eq 1 ]; then
+	CMD_MYSQL=`/usr/bin/which mysql 2>/dev/null`
+	if [ $? -ne 0 ]; then echo "mysql command is necessary when ENABLE_MYSQL is set"; exit; fi
+	CMD_MYSQLDUMP=`/usr/bin/which mysqldump 2>/dev/null`
+	if [ $? -ne 0 ]; then echo "mysqldump command is necessary when ENABLE_MYSQL is set"; exit; fi
+fi
 CMD_UMOUNT=`/usr/bin/which umount 2>/dev/null`
+if [ $? -ne 0 ]; then echo "umount command is necessary..."; exit; fi
 CMD_MAIL=`/usr/bin/which mail 2>/dev/null`
 
 if [ $OS = "FREEBSD" ]; then
@@ -79,7 +100,7 @@ fi
 ##########################################################
 # creating directories
 ##########################################################
-if [ -d $LOCAL_MNT ]; then
+if [ ! -d $LOCAL_MNT ]; then
 	$CMD_MKDIR -p ${LOCAL_MNT}
 fi
 
@@ -396,5 +417,7 @@ fi
 ##########################################################
 # report
 ##########################################################
-echo -e "Backup completed\nRemote filesystem: ${REMOTE_FS_TYPE_NORMAL} / ${REMOTE_FS_TYPE_RSYNC}\nTimes:\n${TIME_MSG}\n\n${ERROR_MSG}" | $CMD_MAIL -s "[ ${HOST} ]${ERROR_IND} BACKUP" tech
+if [ "$CMD_MAIL" -a "$MAIL_TO" ]; then
+	echo -e "Backup completed\nRemote filesystem: ${REMOTE_FS_TYPE_NORMAL} / ${REMOTE_FS_TYPE_RSYNC}\nTimes:\n${TIME_MSG}\n\n${ERROR_MSG}" | $CMD_MAIL -s "[ ${HOST} ]${ERROR_IND} BACKUP" ${MAIL_TO} 
+fi
 echo "# Backup completed #"

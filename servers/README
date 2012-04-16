@@ -6,4 +6,6 @@ This script can be used to do backups from local filesystem and mysql database t
 
 It runs on FreeBSD, Ubuntu (Debian) and Centos (RedHat) systems.
 
+A lot of options are adjustable in config file but not all. For example it's possible you have to set proper paths in mount commands, depend on settings on backup server.
+
 #----------------------------------------------------------------------
