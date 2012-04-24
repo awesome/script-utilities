@@ -93,7 +93,7 @@ def signal_handler(signal,frame):
 # ----------------------------------------
 
 # init
-import ConfigParser, signal, sys, os, re, urllib2, json, warnings, pprint, time, getpass, pickle
+import ConfigParser, signal, sys, os, re, urllib2, json, warnings, time, getpass, pickle
 
 signal.signal(signal.SIGINT, signal_handler)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -343,7 +343,7 @@ if len(gh_data['downloads'])>0:
 
 # format data and save to files for user readable content
 for key,data in gh_data.iteritems():
-	txt=pprint.pformat(data)
+	txt=json.dumps(data,indent=3)
 	f=open(tmp_dir+'/_textdump/'+key+'.json','w')
 	f.write(txt)
 	f.close()
