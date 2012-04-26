@@ -6,7 +6,7 @@
 # connection-watch
 #----------------------------------------------------------------------
 
-This script monitors IP addresess outside LAN using main connection. If packet losses for each monitored destinations are more than 40%, then script swtiches routing to backup connection. 
+This Mikrotik script monitors IP addresess outside LAN using main connection. If packet losses for each monitored destinations are more than 40%, then script swtiches routing to backup connection. 
 
 Usage:
 
@@ -15,3 +15,11 @@ Import script into Mikrotik and adjust few variables at the beginning, backup in
 /ip route add disabled=no distance=2 dst-address=0.0.0.0/0 gateway=backupinterfacename routing-mark=failover
 
 You have to add similar route for each local interface - otherwise routing between local interfaces won't work in case of main connection failure
+
+#----------------------------------------------------------------------
+# set-backup-mode
+#----------------------------------------------------------------------
+
+This Mikrotik script monitors if cable is connected to one of ethernet interfaces working as a "standby interface". When it detects cable, router is switched to standby mode (disabled all other interfaces and schedules) otherwise router is switched into "running" mode (dhcp client is disabled on "standby interface" and its IP is removed, all other interfaces are enabled as well as schedules). Backup router should have up-to-date config - identical to main router. You can achive it using other script (will be here soon).
+
+You can set interface or schedule to be always disabled (even in running mode) by placing #KEEP_DISABLED# somewhere in interface/schedule comment

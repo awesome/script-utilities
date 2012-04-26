@@ -1,0 +1,110 @@
+#                                                                                                                                                                                   
+# Copyright (c) 2012 CodePill Sp. z o.o.
+# Author: Krzysztof Ksiezyk <kksiezyk@gmail.com>
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+# IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+# OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+# IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+# NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
+# SETTINGS
+:local identity "MyName"
+:local standbyInterface "myStandbyInterface"
+:local vlanInterface "myVlanInterface"
+:local normalInterfaces [ /interface find name!=$standbyInterface ]
+:local interface 0
+:local myScheduleName "set-backup-mode"
+:local email "tech"
+:local emailfrom "this@is.me"
+:local stmphost "172.168.1.1"
+:local message ""
+
+# CHECK
+if ( [ :len [ /ip dhcp-client find interface=$standbyInterface ] ] = 0 ) do={
+   :set message "Cannot find DHCP client for $standbyInterface" 
+   /tool e-mail send server=$stmphost body=$message from=$emailfrom to=$email subject="[ ROUTER ] [ ERROR ] SET BACKUP MODE"
+   :error $message
+}
+
+# CURRENT STATUS
+:local vlanDisabled [ / interface ethernet get $vlanInterface disabled ]
+:local lanRunning [ /interface ethernet get $standbyInterface value-name=running ]
+
+:if ($lanRunning) do={
+  :if (!$vlanDisabled) do={
+    :set message "Switching to standby mode"
+    :put $message
+    :log info $message
+# DISABLE INTERFACES
+    :foreach interface in=$normalInterfaces do={
+      :local interfaceName [/interface ethernet get $interface name ]
+      :put "\tdisabling interface $interfaceName"
+      /interface ethernet set $interface disabled=yes
+    }
+# DISABLE SCHEDULES
+    foreach schedule in=[ /system scheduler find name!=$myScheduleName ] do={
+      :local scheduleName [ /system scheduler get $schedule name ]
+      :put "\tdisabling schedule $scheduleName"
+      /system scheduler set $schedule disabled=yes
+    }
+    :put "\tsetting identity to $identity-standby"
+    /system identity set name="$identity-standby"
+    :put "\tenabling DHCP client for $standbyInterface interface"
+    /ip dhcp-client set $standbyInterface disabled=no
+  } else={
+    :put "Already in standby mode"
+  }
+} else={
+  :if ($vlanDisabled) do={
+    :set message "Switching to running mode"
+    :put $message
+    :log info $message
+# ENABLE INTERFACES
+    :foreach interface in=$normalInterfaces do={
+      :local interfaceName [/interface ethernet get $interface name ]
+		:local interfaceComment [ /interface ethernet get $interface comment ]
+      if ($interfaceComment ~ "#KEEP_DISABLED#" ) do={
+        :put "\tleaving interface $interfaceName disabled"
+      } else={
+        :put "\tenabling interface $interfaceName"
+        /interface ethernet set $interface disabled=no
+      }
+    }
+# ENABLE SCHEDULES
+    foreach schedule in=[ /system scheduler find name!=$myScheduleName ] do={
+      :local scheduleName [ /system scheduler get $schedule name ]
+      :local scheduleComment [ /system scheduler get $schedule comment ]
+      if ($scheduleComment ~ "#KEEP_DISABLED#" ) do={
+        :put "\tleaving schedule $scheduleName disabled"
+      } else={
+        :put "\tenabling schedule $scheduleName"
+        /system scheduler set $schedule disabled=no
+      }
+    }
+    :put "\tsetting identity to $identity"
+    /system identity set name="$identity"
+    :put "\tdisabling DHCP client for $standbyInterface interface"
+#    /ip dhcp-client set $standbyInterface disabled=yes
+    :put "\tremoving IP address for $standbyInterface obtained from DHCP"
+#    :foreach ip in=[ /ip address find interface=$standbyInterface dynamic=yes ] do={ /ip address remove $ip }
+  } else={
+    :put "Already in running mode"
+  }
+}
+
+if ( $message != "" ) do={
+   /tool e-mail send server=$stmphost body=$message from=$emailfrom to=$email subject="[ ROUTER ] SET BACKUP MODE"
+}
