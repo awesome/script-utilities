@@ -242,7 +242,7 @@ else:
 
 ## clone repositories
 clprint('blue','Cloning main repository from github');
-cmd='cd '+tmp_dir+' && git clone --mirror '+gh_data['repo']['ssh_url']+' ./'+gh_repo+' >/dev/null'
+cmd='cd '+tmp_dir+' && git clone --mirror '+gh_data['repo']['ssh_url']+' ./'+gh_repo+' >/dev/null 2>/dev/null'
 if debug: clprint('cyan','DEBUG: system cmd: '+cmd)
 res=os.system(cmd);
 if not res==0:
@@ -251,10 +251,12 @@ if not res==0:
 	
 if gh_data['repo']['has_wiki']==1:
 	clprint('blue','Cloning wiki repository from github');
-	cmd='cd '+tmp_dir+' && git clone --mirror '+re.sub('\.git$','.wiki.git',gh_data['repo']['ssh_url'])+' ./'+gh_repo+'.wiki'+' >/dev/null'
+	cmd='cd '+tmp_dir+' && git clone --mirror '+re.sub('\.git$','.wiki.git',gh_data['repo']['ssh_url'])+' ./'+gh_repo+'.wiki'+' >/dev/null 2>/dev/null'
 	if debug: clprint('cyan','DEBUG: system cmd: '+cmd)
 	res=os.system(cmd);
-	if not res==0:
+	if res==32768:
+		clprint ('yellow','\tRepository seems not to have active wiki')
+	elif not res==0:
 		clprint ('red','Command returned error code '+str(res))
 		myexit(255)
 
