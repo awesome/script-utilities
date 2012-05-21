@@ -35,12 +35,12 @@
 # CHECK
 if ( [ :len [ /ip dhcp-client find interface=$standbyInterface ] ] = 0 ) do={
    :set message "Cannot find DHCP client for $standbyInterface" 
-   /tool e-mail send server=$stmphost body=$message from=$emailfrom to=$email subject="[ ROUTER ] [ ERROR ] SET BACKUP MODE"
+   /tool e-mail send server=$stmphost body=$message from=$emailfrom to=$email subject="[ ROUTER BACK ] [ ERROR ] SET BACKUP MODE"
    :error $message
 }
 
 # CURRENT STATUS
-:local vlanDisabled [ / interface ethernet get $vlanInterface disabled ]
+:local vlanDisabled [ / interface vlan get $vlanInterface disabled ]
 :local lanRunning [ /interface ethernet get $standbyInterface value-name=running ]
 
 :if ($lanRunning) do={
@@ -97,14 +97,14 @@ if ( [ :len [ /ip dhcp-client find interface=$standbyInterface ] ] = 0 ) do={
     :put "\tsetting identity to $identity"
     /system identity set name="$identity"
     :put "\tdisabling DHCP client for $standbyInterface interface"
-#    /ip dhcp-client set $standbyInterface disabled=yes
+    /ip dhcp-client set $standbyInterface disabled=yes
     :put "\tremoving IP address for $standbyInterface obtained from DHCP"
-#    :foreach ip in=[ /ip address find interface=$standbyInterface dynamic=yes ] do={ /ip address remove $ip }
+    :foreach ip in=[ /ip address find interface=$standbyInterface dynamic=yes ] do={ /ip address remove $ip }
   } else={
     :put "Already in running mode"
   }
 }
 
 if ( $message != "" ) do={
-   /tool e-mail send server=$stmphost body=$message from=$emailfrom to=$email subject="[ ROUTER ] SET BACKUP MODE"
+   /tool e-mail send server=$stmphost body=$message from=$emailfrom to=$email subject="[ ROUTER BACK ] SET BACKUP MODE"
 }
