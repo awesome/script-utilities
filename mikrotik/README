@@ -20,6 +20,12 @@ You have to add similar route for each local interface - otherwise routing betwe
 # set-backup-mode
 #----------------------------------------------------------------------
 
-This Mikrotik script monitors if cable is connected to one of ethernet interfaces working as a "standby interface". When it detects cable, router is switched to standby mode (disabled all other interfaces and schedules) otherwise router is switched into "running" mode (dhcp client is disabled on "standby interface" and its IP is removed, all other interfaces are enabled as well as schedules). Backup router should have up-to-date config - identical to main router. You can achive it using other script (will be here soon).
+This Mikrotik script monitors if cable is connected to one of ethernet interfaces working as a "standby interface". When it detects cable, router is switched to standby mode (disabled all other interfaces and schedules) otherwise router is switched into "running" mode (dhcp client is disabled on "standby interface" and its IP is removed, all other interfaces are enabled as well as schedules). Backup router should have up-to-date config - identical to main router. You can achive it using other script (mikrotik-sync-config.py).
 
-You can set interface or schedule to be always disabled (even in running mode) by placing #KEEP_DISABLED# somewhere in interface/schedule comment
+You can set interface or schedule to be always disabled (even in "running" mode) by placing #KEEP_DISABLED# somewhere in interface/schedule comment
+
+#----------------------------------------------------------------------
+# mikrotik-sync-config.py
+#----------------------------------------------------------------------
+
+Script for synchronization configs between main router and backup one. It should be used both with set-backup-mode running on backup router. It gets config from main router, filters it (you can configure what in mikrotik-sync-config.cfg), adds clearing config commands at the beginning and import result configuration on backup router. Additionally few necessary operations and checks are performed. Please take a look at source code and adjust configuration options in mikrotik-sync-config.cfg.

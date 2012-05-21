@@ -1,0 +1,9 @@
+[settings]
+rtr_main=192.168.1.1
+rtr_back=192.168.1.2
+ssh_user=sync
+ssh_key_file=/home/user/.ssh/id_dsa
+rtr_back_ident=Router-backup
+rtr_back_standby_interface=ether5
+backup_mode_script=set-backup-mode
+exclude=interfaces,ip proxy,system clock,queue simple
