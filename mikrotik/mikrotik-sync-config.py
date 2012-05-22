@@ -25,6 +25,13 @@
 # ----------------------------------------
 # define functions
 def clprint(color,txt,nonl=False):
+    if nocolor:
+        if nonl:
+            print txt,
+        else:
+            print txt
+        return
+
     colours={
         'default':'',
         'yellow': '\x1b[01;33m',
@@ -68,6 +75,7 @@ exclude.append('port')
 exclude.append('user')
 exclude.append('system routerboard')
 exclude.append('system identity')
+nocolor='--nocolor' in sys.argv
 
 skip=False
 
