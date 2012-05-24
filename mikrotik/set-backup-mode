@@ -63,7 +63,7 @@ if ( [ :len [ /ip dhcp-client find interface=$standbyInterface ] ] = 0 ) do={
     :put "\tsetting identity to $identity-standby"
     /system identity set name="$identity-standby"
     :put "\tenabling DHCP client for $standbyInterface interface"
-    /ip dhcp-client set $standbyInterface disabled=no
+    /ip dhcp-client set [ /ip dhcp-client find interface=$standbyInterface ] disabled=no
   } else={
     :put "Already in standby mode"
   }
@@ -97,7 +97,7 @@ if ( [ :len [ /ip dhcp-client find interface=$standbyInterface ] ] = 0 ) do={
     :put "\tsetting identity to $identity"
     /system identity set name="$identity"
     :put "\tdisabling DHCP client for $standbyInterface interface"
-    /ip dhcp-client set $standbyInterface disabled=yes
+    /ip dhcp-client set [ /ip dhcp-client find interface=$standbyInterface ] disabled=yes
     :put "\tremoving IP address for $standbyInterface obtained from DHCP"
     :foreach ip in=[ /ip address find interface=$standbyInterface dynamic=yes ] do={ /ip address remove $ip }
   } else={
