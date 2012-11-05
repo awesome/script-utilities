@@ -62,6 +62,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 config = ConfigParser.RawConfigParser()
 config.read(__file__[:-3]+'.cfg')
 
+debug=config.get('settings','debug')
 rtr_main=config.get('settings','rtr_main')
 rtr_back=config.get('settings','rtr_back')
 rtr_back_ident=config.get('settings','rtr_back_ident')
@@ -83,13 +84,21 @@ mt_config_main=os.tmpnam()
 mt_config_back_new=os.tmpnam()
 mt_config_back_before=os.tmpnam()
 mt_config_back_after=os.tmpnam()
+if debug:
+    clprint ('cyan','DEBUG:filename main router ronfig:'+mt_config_main)
+    clprint ('cyan','DEBUG:filename backup router new config:'+mt_config_back_new)
 
 clprint('green', 'Start: '+time.strftime("%Y-%m-%d %H:%M:%S"))
 clprint('green', 'Checking main router identity')
 current_ident=os.popen('/usr/bin/ssh -i '+ssh_key_file+' '+ssh_user+'@'+rtr_main+' ":put [ /system identity get name ]"').read().strip()
+if current_ident=="":
+    clprint ('red','Can\'t get router identity')
+    myexit(255)
 if current_ident.lower().startswith(rtr_back_ident):
     clprint ('red','Main router ('+rtr_main+') ident is the same as ident of backup router ('+rtr_back+') - '+rtr_back_ident)
     myexit(255)    
+if debug:
+    clprint ('cyan','\tDEBUG:identity:'+current_ident)
 
 clprint('green', 'Checking DHCP client on backup router')
 res=os.popen('/usr/bin/ssh -i '+ssh_key_file+' '+ssh_user+'@'+rtr_back+' ":put [ /ip dhcp-client get '+rtr_back_standby_interface+' disabled ]"').read()
@@ -120,7 +129,7 @@ users_to_del=[user for user in users_back if user not in users_main]
 if len(users_to_add):
     clprint('yellow','\tUsers to add on backup router: '+', '.join(users_to_add))
 if len(users_to_del):
-    clprint('yellow','\tUsers to del backup router: '+', '.join(users_to_add))
+    clprint('yellow','\tUsers to del from backup router: '+', '.join(users_to_del))
     
 clprint('green', 'Creating erase configuration commands for backup router')
 out=open(mt_config_back_new,'w')
@@ -145,6 +154,10 @@ out.write(":foreach element in=[ /snmp community find default=no ] do={ :put [ /
 out.write(":foreach element in=[ /system logging find default=no ] do={ :put [ /system logging remove $element ] }\n")
 out.write(":foreach element in=[ /system logging action find default=no ] do={ :put [ /system logging action remove $element ] }\n")
 out.write(":foreach element in=[ /user group find default=no ] do={ :put [ /user group remove $element ] }\n")
+out.write(":foreach element in=[ /ipv6 address find dynamic=no ] do={ :put [ /ipv6 address remove $element ] }\n")
+for subsection in 'address-list','filter','mangle':
+    out.write(":foreach element in=[ /ipv6 firewall "+subsection+" find ] do={ :put [ /ipv6 firewall "+subsection+" remove $element ] }\n")
+out.write(":foreach element in=[ /ipv6 route find static=yes ] do={ :put [ /ipv6 route remove $element ] }\n")
 out.write(":foreach element in=[ /ip address find dynamic=no ] do={ :put [ /ip address remove $element ] }\n")
 out.write(":foreach element in=[ /ip dhcp-server lease find ] do={ :put [ /ip dhcp-server lease remove $element ] }\n")
 out.write(":foreach element in=[ /ip dhcp-server network find ] do={ :put [ /ip dhcp-server network remove $element ] }\n")
@@ -198,7 +211,7 @@ if not res==0:
     myexit(255)
 
 clprint('green', 'Backuping current backup router configuration')
-res=os.system('/usr/bin/ssh -i '+ssh_key_file+' '+ssh_user+'@'+rtr_back+' "/system backup save name=backup_before_sync_'+time.strftime("%Y%m%d_%H%M%S")+'" 1>/dev/null 2>/dev/null')
+res=os.system('/usr/bin/ssh -i '+ssh_key_file+' '+ssh_user+'@'+rtr_back+' "/system backup save name=binary_before_sync_'+time.strftime("%Y_%m_%d")+'" 1>/dev/null 2>/dev/null')
 if not res==0:
     clprint ('red','Command returned error code '+str(res))
     myexit(255)    
